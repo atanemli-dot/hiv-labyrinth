@@ -10,7 +10,7 @@ interface QuestionModalProps {
 }
 
 export const QuestionModal: React.FC<QuestionModalProps> = ({ onPass, onFail, onCancel }) => {
-  const { oyun, dogruCevap, yanlisCevap, setMevcutSoru } = useGame();
+  const { oyun, dogruCevap, yanlisCevap, setMevcutSoru, getNextEtiket } = useGame();
   
   const [soru, setSoru] = useState<Soru | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -22,7 +22,7 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({ onPass, onFail, on
     setYukleniyor(true);
     setHata(false);
     try {
-      const yeniSoru = await soruUret(oyun, oyun.mevcutModul);
+      const yeniSoru = await soruUret(oyun, oyun.mevcutModul, undefined, undefined, getNextEtiket());
       setSoru(yeniSoru);
       setMevcutSoru(yeniSoru);
     } catch (e) {

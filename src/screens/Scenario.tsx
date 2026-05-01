@@ -3,6 +3,9 @@ import { useGame } from '../context/GameContext';
 import { soruUret } from '../services/geminiService';
 import { Soru } from '../types/game';
 import { Labyrinth } from '../components/Labyrinth';
+import { Canvas } from '@react-three/fiber';
+import { EscortMission } from '../components/EscortMission';
+import { StigmaSwarm } from '../components/StigmaSwarm';
 
 interface ScenarioProps {
   onNavigate: (screen: string, args?: any) => void;
@@ -10,18 +13,26 @@ interface ScenarioProps {
 }
 
 export const Scenario: React.FC<ScenarioProps> = ({ onNavigate }) => {
-  const { oyun, dogruCevap, yanlisCevap, setMevcutSoru } = useGame();
+  const { 
+    oyun, dogruCevap, yanlisCevap, setMevcutSoru, getNextEtiket, 
+    shieldActive, shieldRemainingMs, escortMissionActive, escortMissionResult 
+  } = useGame();
   
   const [openDoors, setOpenDoors] = useState<string[]>([]);
   const [activeDoor, setActiveDoor] = useState<string | null>(null);
   const [isQuestionOpen, setIsQuestionOpen] = useState(false);
   const [showActionPrompt, setShowActionPrompt] = useState(false);
+  const [showStigmaSwarm, setShowStigmaSwarm] = useState(true); // Gösterim amaçlı başlangıçta açık yapıyoruz
   
   const [soru, setSoru] = useState<Soru | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [cevapVerildi, setCevapVerildi] = useState(false);
   const [yukleniyor, setYukleniyor] = useState(false);
   const [hata, setHata] = useState(false);
+
+  // Kalkan göstergesi için yanıp sönme animasyonu (kalanSüre < 5sn)
+  const isShieldBlinking = shieldActive && shieldRemainingMs < 5000;
+  const shieldBlinkOpacity = isShieldBlinking && (Math.floor(Date.now() / 500) % 2 === 0) ? 'opacity-30' : 'opacity-100';
 
   // We fetch a question when reaching a door
   const handleAtDoor = async (doorId: string, itemType: 'terminal' | 'gateway' | 'anomaly') => {
@@ -46,7 +57,7 @@ export const Scenario: React.FC<ScenarioProps> = ({ onNavigate }) => {
 
     try {
       // Mock question loading
-      const yeniSoru = await soruUret(oyun, oyun.mevcutModul);
+      const yeniSoru = await soruUret(oyun, oyun.mevcutModul, undefined, undefined, getNextEtiket());
       setSoru(yeniSoru);
       setMevcutSoru(yeniSoru);
     } catch (e) {
@@ -107,6 +118,28 @@ export const Scenario: React.FC<ScenarioProps> = ({ onNavigate }) => {
         <Labyrinth level={oyun.mevcutSeviye} onAtDoor={handleAtDoor} openDoors={openDoors} isQuestionOpen={isQuestionOpen} onActionPrompt={setShowActionPrompt} />
       </div>
       
+      {/* React Three Fiber 3D Overlay for Modern Missions */}
+      <div className={`absolute inset-0 z-[5] pointer-events-none ${(escortMissionActive || showStigmaSwarm) ? '' : 'hidden'}`}>
+        <Canvas camera={{ position: [0, 1.5, 5], fov: 75 }}>
+          <ambientLight intensity={0.5} />
+          <pointLight position={[10, 10, 10]} />
+          {escortMissionActive && (
+             <EscortMission 
+               active={escortMissionActive}
+               onComplete={(success) => console.log('Escort Mission Completed:', success)}
+               labyrinthBounds={{ minX: 0, maxX: 14, minZ: 0, maxZ: 14 }}
+             />
+          )}
+          {showStigmaSwarm && (
+             <StigmaSwarm 
+               position={[0, 1.5, 0]}
+               onDispersed={() => setShowStigmaSwarm(false)}
+               onEngulf={(density) => console.log('Swarm engulfed:', density)}
+             />
+          )}
+        </Canvas>
+      </div>
+      
       {/* HUD Guide Overlay */}
       {!isQuestionOpen && (
         <div className="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between p-6">
@@ -119,9 +152,25 @@ export const Scenario: React.FC<ScenarioProps> = ({ onNavigate }) => {
                  <div className="font-mono-label text-[#00ffff] text-xs px-2 py-1 bg-[#00ffff]/10 border border-[#00ffff]/30 w-fit">
                     ONAYLANAN TERMİNALLER: {Math.min(openDoors.length, 3)}/3
                  </div>
+
+                 {/* KALKAN GÖSTERGESİ */}
+                 {shieldActive && (
+                   <div className={`flex items-center gap-2 mt-2 px-3 py-1 bg-[#00E5B0]/20 border border-[#00E5B0] w-fit shadow-[0_0_10px_rgba(0,229,176,0.5)] transition-opacity duration-200 ${shieldBlinkOpacity}`}>
+                      <span className="material-symbols-outlined text-[#00E5B0] text-sm">security</span>
+                      <span className="font-mono-stat text-[#00E5B0] font-bold text-sm tracking-widest">
+                         KALKAN: {Math.ceil(shieldRemainingMs / 1000)}s
+                      </span>
+                   </div>
+                 )}
+                 
              </div>
-             <div className="font-mono-stat text-sm font-bold text-[#00ffff] px-3 py-1 bg-[#1E1E3A]/80 border border-[#00ffff]/50 rounded shadow-[0_0_10px_rgba(0,255,255,0.2)]">
-                XP {oyun.xp}
+             <div className="flex flex-col items-end gap-2">
+                 <div className="font-mono-stat text-sm font-bold text-[#00ffff] px-3 py-1 bg-[#1E1E3A]/80 border border-[#00ffff]/50 rounded shadow-[0_0_10px_rgba(0,255,255,0.2)]">
+                    XP {oyun.xp}
+                 </div>
+                 <div className="font-mono-stat text-sm font-bold text-[#FF2D55] px-3 py-1 bg-[#1E1E3A]/80 border border-[#FF2D55]/50 rounded shadow-[0_0_10px_rgba(255,45,85,0.2)]">
+                    BÜTÜNLÜK: {Math.ceil(oyun.butunluk)}%
+                 </div>
              </div>
           </div>
           <div className="text-center pb-8 flex flex-col items-center gap-4">

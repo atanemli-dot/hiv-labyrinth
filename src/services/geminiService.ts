@@ -8,12 +8,13 @@ export async function soruUret(
   oyun: OyunDurumu,
   modul?: ModulType,
   zorlukOverride?: ZorlukType,
-  formatOverride?: FormatType
+  formatOverride?: FormatType,
+  hedefEtiket?: string | null
 ): Promise<Soru> {
   const hedefModul = modul ?? oyun.mevcutModul;
   // Simulate network delay to maintain UI feel
   await new Promise(r => setTimeout(r, 1000));
-  return getRandomQuestion(hedefModul, false);
+  return getRandomQuestion(hedefModul, false, hedefEtiket);
 }
 
 export async function bosssoruUret(modul: ModulType): Promise<Soru> {

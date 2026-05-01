@@ -181,10 +181,19 @@ export const mockBossQuestions: Partial<Record<ModulType, Omit<Soru, 'id' | 'mod
   ]
 };
 
-export function getRandomQuestion(modul: ModulType, isBoss: boolean = false): Soru {
+export function getRandomQuestion(modul: ModulType, isBoss: boolean = false, hedefEtiket?: string | null): Soru {
   const pool = isBoss ? mockBossQuestions[modul] : mockQuestions[modul];
   const list = pool && pool.length > 0 ? pool : mockQuestions['hiv']!;
-  const q = list[Math.floor(Math.random() * list.length)];
+  
+  let validQuestions = list;
+  if (hedefEtiket) {
+     const matching = list.filter(q => q.kaynak_etiket === hedefEtiket);
+     if (matching.length > 0) {
+        validQuestions = matching;
+     }
+  }
+
+  const q = validQuestions[Math.floor(Math.random() * validQuestions.length)];
   return {
     ...q,
     id: guidGenerator(),

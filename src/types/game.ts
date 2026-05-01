@@ -47,6 +47,7 @@ export interface OdaBilgi {
 }
 
 export interface OyunDurumu {
+  butunluk: number;
   xp: number;
   haklar: number;
   streak: number;
@@ -122,6 +123,7 @@ export const MODULLER: ModulBilgi[] = [
 
 // Başlangıç oyun durumu
 export const BASLANGIC_DURUMU: OyunDurumu = {
+  butunluk: 100,
   xp: 0,
   haklar: 3,
   streak: 0,
